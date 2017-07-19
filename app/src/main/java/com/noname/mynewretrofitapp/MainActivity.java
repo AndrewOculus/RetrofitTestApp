@@ -4,11 +4,17 @@ import android.content.Context;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.squareup.picasso.Picasso;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -22,15 +28,36 @@ public class MainActivity extends AppCompatActivity {
     private TextView tv1;
     private ImageView imageView;
     private MainActivity main;
+    private List<GitApiInterface> posts;
+    GitApiInterface service;
+    RecyclerView recyclerView;
+    RVAdapter adapter;
+    Callback<GithubUser> callb;
+
+    private List<Person> persons;
+    private RecyclerView rv;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        tv1 = (TextView) findViewById(R.id.tv1);
-        imageView = (ImageView)  findViewById(R.id.image);
         main = this;
+
+        setContentView(R.layout.recyclerview_activity);
+
+        rv=(RecyclerView)findViewById(R.id.rv);
+
+        LinearLayoutManager llm = new LinearLayoutManager(this);
+        rv.setLayoutManager(llm);
+        rv.setHasFixedSize(true);
+
+        initializeData();
+
+        //tv1 = (TextView) findViewById(R.id.tv1);
+        //imageView = (ImageView)  findViewById(R.id.image);
+
+
 
         Retrofit client = new Retrofit.Builder()
                 .baseUrl(BASE_URL)
@@ -38,44 +65,44 @@ public class MainActivity extends AppCompatActivity {
                 .build();
 
 
-        GitApiInterface service = client.create(GitApiInterface.class);
+        service = client.create(GitApiInterface.class);
         Call<GithubUser> call = service.getUser("AndrewOculus");
 
-        call.enqueue(new Callback<GithubUser>() {
+
+        callb = new Callback<GithubUser>() {
 
             @Override
             public void onResponse(Call<GithubUser> call, Response<GithubUser> response) {
 
+                persons.add(new Person(response.body().getName().toString(), response.body().getFollowers()+" followers",response.body().getAvatarUrl() ));//response.body().getAvatarUrl()
+                rv.setAdapter(adapter);
 
-                addString(response.body().getId().toString());
-                if(response.body().getBio() != null)
-                    addString(response.body().getBio().toString());
-                if(response.body().getBlog() != null)
-                    addString(response.body().getBlog().toString());
-                if(response.body().getCompany() != null)
-                    addString(response.body().getCompany().toString());
-                if(response.body().getAvatarUrl() != null)
-                    addString(response.body().getAvatarUrl().toString());
-
-                if(response.body().getAvatarUrl() != null)
-                Picasso.with(main) //передаем контекст приложения
-                        .load(response.body().getAvatarUrl())
-                        .into(imageView); //ссылка на ImageView
-
-                Toast.makeText(MainActivity.this, response.body().getLogin().toString(), Toast.LENGTH_SHORT).show();
+                //Toast.makeText(MainActivity.this, response.body().getLogin().toString(), Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onFailure(Call<GithubUser> call, Throwable t) {
 
             }
-        });
+        };
+        call.enqueue(callb);
+
+        call = service.getUser("tutsplus");
+        call.enqueue(callb);
+
+        call = service.getUser("uber-node");
+        call.enqueue(callb);
+
+        call = service.getUser("Raynos");
+        call.enqueue(callb);
 
     }
 
-    public void addString(String str)
-    {
-        tv1.setText(tv1.getText()+"\n"+str);
+    private void initializeData(){
+        persons = new ArrayList<>();
+        adapter = new RVAdapter(persons , main);
+        rv.setAdapter(adapter);
+
     }
 
 }
